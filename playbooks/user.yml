@@ -1,0 +1,16 @@
+---
+- name: Ansible module - user
+  hosts: all
+  become: yes
+  
+  tasks:
+    - name: Ensure group exists
+      ansible.builtin.group:
+        name: devops
+        state: present
+
+    - name: Create a new user in a group
+      ansible.builtin.user:
+        name: abeginner
+        group: devops
+

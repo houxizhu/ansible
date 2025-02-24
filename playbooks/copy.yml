@@ -1,0 +1,22 @@
+---
+- name: Ansible module - copy
+  hosts: all
+  
+  tasks:
+    - name: Prepare the destination dir
+      ansible.builtin.file:
+        path: /opt/devops/ssh
+        state: directory
+
+    - name: Copy private key file
+      ansible.builtin.copy:
+        src: ssh/id_rsa
+        dest: /opt/devops/ssh/id_rsa
+        mode: "0600"
+
+    - name: Copy public key file
+      ansible.builtin.copy:
+        src: ssh/id_rsa.pub
+        dest: /opt/devops/ssh/id_rsa.pub
+        mode: "0644"
+

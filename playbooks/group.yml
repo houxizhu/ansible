@@ -1,0 +1,11 @@
+---
+- name: Ansible module - group
+  hosts: all
+
+  tasks:
+    - name: Ensure group exists
+      ansible.builtin.group:
+        name: devops
+        state: present
+      become: yes
+

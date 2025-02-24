@@ -1,0 +1,42 @@
+---
+- name: Ansible playbooks for AWS - creating keypairs manually
+  hosts: localhost
+  connection: local
+
+  vars:
+    aws_region: ap-southeast-2
+    this_name: aed25529abeginner
+
+  vars_files:
+    - vault.yml
+
+  environment:
+    AWS_REGION: "{{ aws_region }}"
+    AWS_ACCESS_KEY: '{{ vault_aws_access_key }}'
+    AWS_SECRET_KEY: '{{ vault_aws_secret_key }}'
+
+  tasks:
+    - name: Delete duplicate key
+      amazon.aws.ec2_key:
+        name: "{{ this_name }}"
+        state: absent
+
+    - name: New AWS keypair
+      amazon.aws.ec2_key:
+        name: "{{ this_name }}"
+        key_type: ed25519
+        #file_name: "ansible_ssh_private_key.{{ this_name }}"
+      register: aws_keypair
+      no_log: true
+
+    - name: Save keypair private key from output
+      ansible.builtin.copy:
+        content: "{{ aws_keypair.key.private_key }}"
+        dest: "ansible_ssh_private_key.{{ this_name }}"
+        mode: "0400"
+
+    - name: Option2, creating keypair with existing key
+      amazon.aws.ec2_key:
+        name: "bbeginner"
+        key_material: "{{ lookup('file', 'files/ssh/bbeginner.pub') }}"
+

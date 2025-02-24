@@ -1,0 +1,65 @@
+---
+    - name: New a VPC
+      amazon.aws.ec2_vpc_net:
+        name: "{{ this_name }}"
+        state: present
+        region: "{{ aws_region }}"
+        cidr_block: "{{ awsvpc_vpc_cidr_block }}"
+        dns_hostnames: true
+        dns_support: true
+        tags:
+          Name: "{{ this_name }}"
+          owner: "{{ owner }}"
+          repo: "{{ repo }}"
+        tenancy: default
+      register: newvpc
+
+    - name: Subnet
+      amazon.aws.ec2_vpc_subnet:
+        region: "{{ aws_region }}"
+        state: present
+        vpc_id: "{{ newvpc.vpc.id }}"
+        cidr: "{{ subnet_cidr_block }}"
+        map_public: true
+        tags:
+          Name: "{{ this_name }}"
+          owner: "{{ owner }}"
+      register: public_subnets
+      loop: "{{ awsvpc_subnet_cidr_blocks }}"
+      loop_control:
+        loop_var: subnet_cidr_block
+
+    - name: Internet gateway
+      amazon.aws.ec2_vpc_igw:
+        region: "{{ aws_region }}"
+        vpc_id: "{{ newvpc.vpc.id }}"
+        state: present
+        tags:
+          Name: "{{ this_name }}"
+          owner: "{{ owner }}"
+      register: igw
+
+    - name: Route table
+      amazon.aws.ec2_vpc_route_table:
+        region: "{{ aws_region }}"
+        vpc_id: "{{ newvpc.vpc.id }}"
+        subnets:
+          - "{{ public_subnets.results[0].subnet.id }}"
+        routes:
+          - dest: "0.0.0.0/0"
+            gateway_id: "{{ igw.gateway_id }}"
+        tags:
+          Name: "{{ this_name }}"
+          owner: "{{ owner }}"
+
+    - name: Debug public subnet ID
+      ansible.builtin.debug:
+        msg:
+          - "vpc id, {{ public_subnet.subnet.vpc_id }}"
+          - "subnet id, {{ public_subnet.subnet.id }}"
+      loop: "{{ public_subnets.results }}"
+      loop_control:
+        loop_var: public_subnet
+      when: debug_on | default('false') == "true"
+
+

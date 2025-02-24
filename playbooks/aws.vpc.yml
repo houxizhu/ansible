@@ -1,0 +1,76 @@
+---
+- name: Ansible for AWS, automating VPC = vpc + subnet + igw + route table
+  hosts: localhost
+  connection: local
+
+  vars:
+    this_name: aabeginner
+    aws_region: ap-southeast-2
+    awsvpc_vpc_cidr_block: "10.10.0.0/16"
+    owner: adevopsbeginner
+
+  vars_files:
+    - vault.yml
+
+  environment:
+    AWS_REGION: "{{ aws_region }}"
+    AWS_ACCESS_KEY: '{{ vault_aws_access_key }}'
+    AWS_SECRET_KEY: '{{ vault_aws_secret_key }}'
+
+  tasks:
+    - name: New a VPC
+      amazon.aws.ec2_vpc_net:
+        name: "{{ this_name }}"
+        state: present
+        region: "{{ aws_region }}"
+        cidr_block: "{{ awsvpc_vpc_cidr_block }}"
+        dns_hostnames: true
+        dns_support: true
+        tags:
+          Name: "{{ this_name }}"
+          owner: "{{ owner }}"
+        tenancy: default
+      register: newvpc
+
+    - name: Subnet
+      amazon.aws.ec2_vpc_subnet:
+        region: "{{ aws_region }}"
+        state: present
+        vpc_id: "{{ newvpc.vpc.id }}"
+        cidr: "10.10.10.0/24"
+        map_public: true
+        tags:
+          Name: "{{ this_name }}"
+          owner: "{{ owner }}"
+      register: public_subnets
+
+    - name: IGW
+      amazon.aws.ec2_vpc_igw:
+        region: "{{ aws_region }}"
+        vpc_id: "{{ newvpc.vpc.id }}"
+        state: present
+        tags:
+          Name: "{{ this_name }}"
+          owner: "{{ owner }}"
+      register: igw
+
+    - name: Route table
+      amazon.aws.ec2_vpc_route_table:
+        region: "{{ aws_region }}"
+        vpc_id: "{{ newvpc.vpc.id }}"
+        subnets:
+          - "{{ public_subnets.subnet.id }}"
+        routes:
+          - dest: "0.0.0.0/0"
+            gateway_id: "{{ igw.gateway_id }}"
+        tags:
+          Name: "{{ this_name }}"
+          owner: "{{ owner }}"
+
+    - name: Debug public subnet ID
+      ansible.builtin.debug:
+        msg:
+          - "vpc id, {{ public_subnets.subnet.vpc_id }}"
+          - "subnet id, {{ public_subnets.subnet.id }}"
+
+

@@ -1,0 +1,18 @@
+---
+- name: Module, file.directory
+  hosts: all
+
+  tasks:
+    - name: Create a directory if it does not exist
+      ansible.builtin.file:
+        path: /opt/devops
+        state: directory
+        owner: ec2-user
+        group: ec2-user
+      become: yes
+
+    - name: New a file
+      ansible.builtin.file:
+        path: /opt/devops/a_devops_beginner_file
+        state: touch
+
